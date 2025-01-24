@@ -1,8 +1,8 @@
-version: '3.8'
+version: "3.8"
 services:
   mysql:
     image: mysql:8
-    container_name: mysql_apotek 
+    container_name: mysql_apotek
     environment:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: apotek
