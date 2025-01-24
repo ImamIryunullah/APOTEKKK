@@ -1,6 +1,7 @@
 package config
 
 import (
+	"apotek-management/models"
 	"fmt"
 	"log"
 
@@ -12,10 +13,23 @@ var DB *gorm.DB
 
 func ConnectDB() {
 	dsn := "root:password@tcp(127.0.0.1:3306)/apotek?charset=utf8mb4&parseTime=True&loc=Local"
-	var err error
-	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		log.Fatal("Gagal koneksi ke database:", err)
 	}
-	fmt.Println("Database connection successful")
+
+	fmt.Println("Database berhasil terkoneksi")
+
+	err = db.AutoMigrate(
+		&models.Stok{},
+		&models.TagObat{},
+		&models.TipeObat{},
+		&models.Obat{},
+		&models.Transaksi{},
+	)
+	if err != nil {
+		log.Fatal("err migrasi:", err)
+	}
+
+	DB = db
 }

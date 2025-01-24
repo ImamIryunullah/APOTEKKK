@@ -5,17 +5,20 @@ import (
 )
 
 type Transaksi struct {
-	ID            uint      `json:"id" gorm:"primaryKey"`
-	KodeTransaksi string    `json:"kode_transaksi" gorm:"type:varchar(20);unique;not null"`
-	Jumlah        int64     `json:"jumlah" gorm:"type:bigint;not null"`
-	HargaSatuan   float64   `json:"harga_satuan" gorm:"type:decimal(10,2);not null"`
-	TotalHarga    float64   `json:"total_harga" gorm:"type:decimal(10,2);not null"`
-	Status        string    `json:"status" gorm:"type:varchar(50);not null"`
-	CreatedAt     time.Time `json:"created_at" gorm:"autoCreateTime"` 
+	ID            uint              `json:"id_transaksi" gorm:"primaryKey"`
+	KodeTransaksi string            `json:"kode_transaksi" gorm:"type:varchar(20);unique;not null"`
+	TotalHarga    int               `json:"total_harga" gorm:"type:int;not null"`
+	Status        string            `json:"status" gorm:"type:varchar(50);not null"`
+	ObatID        uint              `json:"id_obat" gorm:"not null"`
+	Obats         []TransaksiDetail `json:"obats" gorm:"foreignKey:TransaksiID"`
+	CreatedAt     time.Time         `json:"created_at" gorm:"type:timestamp;default:CURRENT_TIMESTAMP"`
 }
 
-
-func (transaksi *Transaksi) BeforeCreate() {
-	// Hitung total harga saat transaksi dibuat
-	transaksi.TotalHarga = float64(transaksi.Jumlah) * transaksi.HargaSatuan
+type TransaksiDetail struct {
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	TransaksiID uint      `json:"id_transaksi" gorm:"not null"`
+	ObatID      uint      `json:"id_obat" gorm:"not null"`
+	Jumlah      int       `json:"jumlah" gorm:"type:int;not null"`
+	Obat        Obat      `json:"obat" gorm:"foreignKey:ObatID;references:ID"`
+	CreatedAt   time.Time `json:"created_at" gorm:"type:timestamp;default:CURRENT_TIMESTAMP"`
 }

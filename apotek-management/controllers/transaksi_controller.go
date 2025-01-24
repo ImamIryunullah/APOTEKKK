@@ -8,27 +8,47 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// CreateTransaksi untuk menambahkan transaksi baru
 func CreateTransaksi(c *gin.Context) {
 	var transaksi models.Transaksi
+
 	if err := c.ShouldBindJSON(&transaksi); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input: " + err.Error()})
 		return
+	}
+
+	for _, detail := range transaksi.Obats {
+		if detail.Jumlah <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Jumlah obat harus lebih dari 0"})
+			return
+		}
 	}
 
 	if err := config.DB.Create(&transaksi).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create transaksi: " + err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, transaksi)
+	var createdTransaksi models.Transaksi
+	if err := config.DB.
+		Preload("Obats.Obat").
+		Preload("Obats.Obat.TipeObat").
+		Preload("Obats.Obat.Tags").
+		Preload("Obats.Obat.Stok").
+		First(&createdTransaksi, transaksi.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load transaksi with relations: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, createdTransaksi)
 }
-
-
 
 func GetAllTransaksi(c *gin.Context) {
 	var transaksiList []models.Transaksi
-	if err := config.DB.Find(&transaksiList).Error; err != nil {
+
+	if err := config.DB.
+		Preload("Obats.Obat.Tags").
+		Preload("Obats.Obat.TipeObat").Preload("Obats.Obat.Stok").
+		Find(&transaksiList).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -39,7 +59,7 @@ func GetAllTransaksi(c *gin.Context) {
 func GetTransaksiByID(c *gin.Context) {
 	id := c.Param("id")
 	var transaksi models.Transaksi
-	if err := config.DB.First(&transaksi, id).Error; err != nil {
+	if err := config.DB.Preload("Obats.Obat.Tags").Preload("Obats.Obat.TipeObat").First(&transaksi, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Transaksi not found"})
 		return
 	}
@@ -47,10 +67,10 @@ func GetTransaksiByID(c *gin.Context) {
 	c.JSON(http.StatusOK, transaksi)
 }
 
-// UpdateTransaksi untuk memperbarui transaksi berdasarkan ID
 func UpdateTransaksi(c *gin.Context) {
 	id := c.Param("id")
 	var transaksi models.Transaksi
+
 	if err := config.DB.First(&transaksi, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Transaksi not found"})
 		return
@@ -62,14 +82,22 @@ func UpdateTransaksi(c *gin.Context) {
 	}
 
 	if err := config.DB.Save(&transaksi).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update transaksi: " + err.Error()})
+		return
+	}
+
+	if err := config.DB.
+		Preload("Obat").
+		Preload("Obat.TipeObat").
+		Preload("Obat.TagObat").
+		First(&transaksi, id).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load updated transaksi: " + err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, transaksi)
 }
 
-// DeleteTransaksi untuk menghapus transaksi berdasarkan ID
 func DeleteTransaksi(c *gin.Context) {
 	id := c.Param("id")
 	var transaksi models.Transaksi
@@ -78,7 +106,9 @@ func DeleteTransaksi(c *gin.Context) {
 		return
 	}
 
-	if err := config.DB.Delete(&transaksi).Error; err != nil {
+	if err := config.DB.Preload("Obat").
+		Preload("Obat.TipeObat").
+		Preload("Obat.TagObat").Delete(&transaksi).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -104,7 +134,6 @@ func CreateBatchTransaksi(c *gin.Context) {
 	})
 }
 
-// UpdateBatchTransaksi untuk memperbarui beberapa transaksi sekaligus
 func UpdateBatchTransaksi(c *gin.Context) {
 	var transaksiList []models.Transaksi
 	if err := c.ShouldBindJSON(&transaksiList); err != nil {
@@ -125,7 +154,6 @@ func UpdateBatchTransaksi(c *gin.Context) {
 	})
 }
 
-// DeleteBatchTransaksi untuk menghapus beberapa transaksi sekaligus berdasarkan ID
 func DeleteBatchTransaksi(c *gin.Context) {
 	var ids []uint
 	if err := c.ShouldBindJSON(&ids); err != nil {

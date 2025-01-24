@@ -48,7 +48,6 @@ func SetupRoutes(router *gin.Engine) {
 		api.PUT("/transaksi/batch_update", controllers.UpdateBatchTransaksi)
 		api.DELETE("/transaksi/batch_delete", controllers.DeleteBatchTransaksi)
 
-
 		// Obat
 		api.GET("/obat", controllers.GetAllObat)
 		api.GET("/obat/:id", controllers.GetObatByID)
